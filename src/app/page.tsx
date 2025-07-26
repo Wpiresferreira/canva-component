@@ -1,6 +1,6 @@
 'use client'; // required if using Next.js App Router
 
-import { useRef, useState, useEffect } from 'react';
+import { useState } from 'react';
 import SatelliteMap from './test1/page';
 import { Button, } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

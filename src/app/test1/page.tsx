@@ -5,9 +5,8 @@ import {
   DocumentArrowDownIcon,
 } from "@heroicons/react/24/solid";
 import React, { useRef, useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 
-const html2canvas = dynamic(() => import("html2canvas-pro"), { ssr: false });
+const html2canvasFn = (await import("html2canvas-pro")).default;
 
 declare global {
   interface Window {
@@ -32,7 +31,6 @@ export default function SatelliteMap({ address }: SatelliteMapProps) {
     null
   );
   const [mapZoom, setMapZoom] = useState<number | null>(null);
-  const [resultsSearch, setResultSearch] = useState([]);
 
   const initMap = () => {
     const geocoder = new window.google.maps.Geocoder();
@@ -49,8 +47,6 @@ export default function SatelliteMap({ address }: SatelliteMapProps) {
     if (!mapCenter) {
       geocoder.geocode({ address }, (results, status) => {
         if (status === "OK" && results && results[0]) {
-          setResultSearch(results);
-          console.log(results);
           const location = results[0].geometry.location;
           map.setCenter(location);
           setMapCenter({
@@ -139,8 +135,7 @@ export default function SatelliteMap({ address }: SatelliteMapProps) {
     const container = document.getElementById("map-container");
     if (!container) return;
 
-    const module = await import("html2canvas-pro");
-    const html2canvasFn = module.default;
+    const html2canvasFn = (await import("html2canvas-pro")).default;
 
     const canvas = await html2canvasFn(container, {
       useCORS: true,
@@ -155,8 +150,7 @@ export default function SatelliteMap({ address }: SatelliteMapProps) {
     const container = document.getElementById("map-container");
     if (!container) return;
 
-    const module = await import("html2canvas-pro");
-    const html2canvasFn = module.default;
+    const html2canvasFn = (await import("html2canvas-pro")).default;
 
     if (typeof html2canvasFn !== "function") {
       throw new Error("html2canvas-pro default export is not a function.");
