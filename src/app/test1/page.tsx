@@ -21,7 +21,7 @@ interface SatelliteMapProps {
 const GOOGLE_MAPS_API_KEY = "AIzaSyCtLeDVA1bbNBWKelC-8_8xv7WjgcDNMFk";
 // const GOOGLE_MAPS_API_KEY = "YOUR_API_KEY_HERE";
 
-export default function SatelliteMap({ address }: SatelliteMapProps) {
+export default function PageClient({ address }: { address: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
