@@ -229,7 +229,7 @@ const [geocodeOptions, setGeocodeOptions] = useState<google.maps.GeocoderResult[
         {!mapSnapshot ? (
           <div
             ref={mapElementRef}
-            className="max-w-[500px] h-[500px] absolute top-0 left-0 z-0"
+            className="w-[500px] h-[500px] absolute top-0 left-0 z-0"
           />
         ) : (
           <Image
@@ -243,49 +243,15 @@ const [geocodeOptions, setGeocodeOptions] = useState<google.maps.GeocoderResult[
 
         {mapSnapshot && (
           <canvas
-  ref={canvasRef}
-  width={window.innerWidth}
-  height={500}
-  className="absolute top-0 left-0 pointer-events-auto touch-none cursor-pointer"
-  onMouseDown={startDrawing}
-  onMouseMove={draw}
-  onMouseUp={stopDrawing}
-  onMouseLeave={stopDrawing}
-  onTouchStart={(e) => {
-    const touch = e.touches[0];
-    if (!touch) return;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (rect) {
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      setIsDrawing(true);
-      setLastPos({ x, y });
-    }
-  }}
-  onTouchMove={(e) => {
-    if (!isDrawing) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (rect) {
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      const ctx = canvasRef.current?.getContext("2d");
-      if (ctx) {
-        ctx.beginPath();
-        ctx.moveTo(lastPos.x, lastPos.y);
-        ctx.lineTo(x, y);
-        ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
-        ctx.lineWidth = 4;
-        ctx.lineCap = "round";
-        ctx.stroke();
-        setLastPos({ x, y });
-      }
-    }
-  }}
-  onTouchEnd={() => setIsDrawing(false)}
-  onTouchCancel={() => setIsDrawing(false)}
-/>
+            ref={canvasRef}
+            width={window.innerWidth}
+            height={500}
+            className="absolute top-0 left-0 pointer-events-auto cursor-pointer"
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+          />
         )}
 
         {showGeocodeSelector && (
