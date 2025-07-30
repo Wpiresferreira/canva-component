@@ -4,9 +4,8 @@ import {
   XMarkIcon,
   DocumentArrowDownIcon,
 } from "@heroicons/react/24/solid";
+import Image from "next/image";
 import React, { useRef, useEffect, useState } from "react";
-
-const html2canvasFn = (await import("html2canvas-pro")).default;
 
 declare global {
   interface Window {
@@ -14,16 +13,14 @@ declare global {
   }
 }
 
-interface SatelliteMapProps {
-  address: string;
-}
-
 const GOOGLE_MAPS_API_KEY = "AIzaSyCtLeDVA1bbNBWKelC-8_8xv7WjgcDNMFk";
-// const GOOGLE_MAPS_API_KEY = "YOUR_API_KEY_HERE";
 
-export default function PageClient({ address }: { address: string }) {
+export default function imageSelectorMain({ address }: { address: string }) {
+  const initialZipCode = "T2P 2M3";
+const [geocodeOptions, setGeocodeOptions] = useState<google.maps.GeocoderResult[]>([]);
+  const mapElementRef = useRef<HTMLDivElement | null>(null); // DOM node
+  const mapInstanceRef = useRef<google.maps.Map | null>(null); // actual map
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const mapRef = useRef<HTMLDivElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
   const [mapSnapshot, setMapSnapshot] = useState<string | null>(null);
@@ -31,60 +28,78 @@ export default function PageClient({ address }: { address: string }) {
     null
   );
   const [mapZoom, setMapZoom] = useState<number | null>(null);
+  const [showGeocodeSelector, setShowGeocodeSelector] = useState(false);
 
   const initMap = () => {
+    if (!window.google?.maps?.Geocoder || !mapElementRef.current) return;
+
     const geocoder = new window.google.maps.Geocoder();
     const defaultCenter = { lat: 0, lng: 0 };
 
-    const map = new window.google.maps.Map(mapRef.current!, {
+    const map = new window.google.maps.Map(mapElementRef.current, {
       zoom: mapZoom ?? 20,
       mapTypeId: "hybrid",
-      tilt: 0, // ensures top-down view
+      tilt: 0,
       heading: 0,
       center: mapCenter ?? defaultCenter,
     });
 
+    mapInstanceRef.current = map;
+
     if (!mapCenter) {
       geocoder.geocode({ address }, (results, status) => {
-        if (status === "OK" && results && results[0]) {
-          const location = results[0].geometry.location;
-          map.setCenter(location);
-          setMapCenter({
-            lat: location.lat(),
-            lng: location.lng(),
-          });
+        if (status === "OK" && results) {
+          if (results.length === 1) {
+            const location = results[0].geometry.location;
+            map.setCenter(location);
+            setMapCenter({
+              lat: location.lat(),
+              lng: location.lng(),
+            });
+          } else {
+            setGeocodeOptions(results);
+            setShowGeocodeSelector(true);
+          }
         }
       });
     }
 
     map.addListener("idle", () => {
-      setMapCenter({
-        lat: map.getCenter()?.lat() ?? 0,
-        lng: map.getCenter()?.lng() ?? 0,
-      });
+      const center = map.getCenter();
+      if (center) {
+        setMapCenter({ lat: center.lat(), lng: center.lng() });
+      }
       setMapZoom(map.getZoom() ?? 20);
     });
   };
 
   useEffect(() => {
-    if (!address) return;
-    const loadGoogleMapsScript = () => {
+    const loadGoogleScript = () => {
+      if (window.google?.maps) {
+        initMap();
+        return;
+      }
+
       const existingScript = document.querySelector(
         `script[src^="https://maps.googleapis.com/maps/api/js"]`
       );
-      if (existingScript) return; // Already loaded
+      if (existingScript) {
+        existingScript.addEventListener("load", initMap);
+        return;
+      }
 
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}`;
       script.async = true;
-      script.onload = initMap;
-      document.body.appendChild(script);
+      script.defer = true;
+      script.onload = () => {
+        if (window.google?.maps) initMap();
+      };
+      document.head.appendChild(script);
     };
 
-    if (!window.google || !window.google.maps) {
-      loadGoogleMapsScript();
-    } else {
-      initMap();
+    if (typeof window !== "undefined") {
+      loadGoogleScript();
     }
   }, [address]);
 
@@ -122,26 +137,22 @@ export default function PageClient({ address }: { address: string }) {
 
   const toggleCaptureView = async () => {
     if (mapSnapshot) {
-      // Return to live map view — use stored center & zoom
       setMapSnapshot(null);
-      clearDrawing(); // optional cleanup
+      clearDrawing();
       setTimeout(() => {
-        initMap(); // reinitialize map using current state
+        initMap();
       }, 0);
       return;
     }
 
-    // Otherwise, capture the current view
     const container = document.getElementById("map-container");
     if (!container) return;
 
     const html2canvasFn = (await import("html2canvas-pro")).default;
-
     const canvas = await html2canvasFn(container, {
       useCORS: true,
       allowTaint: false,
     });
-
     const dataUrl = canvas.toDataURL("image/png");
     setMapSnapshot(dataUrl);
   };
@@ -151,28 +162,34 @@ export default function PageClient({ address }: { address: string }) {
     if (!container) return;
 
     const html2canvasFn = (await import("html2canvas-pro")).default;
+    const canvas = await html2canvasFn(container, {
+      useCORS: true,
+      allowTaint: false,
+    });
 
-    if (typeof html2canvasFn !== "function") {
-      throw new Error("html2canvas-pro default export is not a function.");
-    }
-
-    const canvas = await html2canvasFn(
-      document.getElementById("map-container")!,
-      {
-        useCORS: true,
-        allowTaint: false,
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        console.error("Blob creation failed.");
+        return;
       }
-    );
 
-    const link = document.createElement("a");
-    link.download = "captured_map_drawing.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
+      const formData = new FormData();
+      formData.append("file", blob, "map-drawing.png");
+      formData.append("customerID", "wagner123");
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+      console.log("Image URL:", result.url);
+      alert("Upload complete! 🎉");
+    }, "image/png");
   };
 
   return (
-    <div className="relative w-full h-[500px]">
-      <div className="flex flex-nowrap absolute top-2 right-2 z-10 px-4 py-2">
+    <div className={`relative w-[500px] h-[500px]`}>
+      <div className={` flex flex-nowrap absolute top-2 right-2 z-10 px-4 py-2`}>
         {!mapSnapshot ? (
           <button
             onClick={toggleCaptureView}
@@ -208,17 +225,19 @@ export default function PageClient({ address }: { address: string }) {
         )}
       </div>
 
-      <div id="map-container" className="relative w-full h-[500px]">
+      <div id="map-container" className={`relative w-full max-w-[500px] h-[500px] `}>
         {!mapSnapshot ? (
           <div
-            ref={mapRef}
-            className="w-full h-[500px] absolute top-0 left-0 z-0"
+            ref={mapElementRef}
+            className="w-[500px] h-[500px] absolute top-0 left-0 z-0"
           />
         ) : (
-          <img
+          <Image
+          width={500}
+          height={500}
             src={mapSnapshot}
             alt="Captured Map View"
-            className="w-full h-[500px] object-cover"
+            className={`w-full h-[500px] object-cover `}
           />
         )}
 
@@ -227,12 +246,41 @@ export default function PageClient({ address }: { address: string }) {
             ref={canvasRef}
             width={window.innerWidth}
             height={500}
-            className="absolute top-0 left-0 cursor-crosshair pointer-events-auto"
+            className="absolute top-0 left-0 pointer-events-auto cursor-pointer"
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
             onMouseLeave={stopDrawing}
           />
+        )}
+
+        {showGeocodeSelector && (
+          <div className="absolute top-4 left-4 z-20 bg-white shadow-md rounded max-w-md w-[90%] sm:w-[400px]">
+            <h2 className="text-lg font-bold mb-2 px-4 pt-4">
+              Select a Location
+            </h2>
+            <ul>
+              {geocodeOptions.map((result, i) => {
+                const formattedAddress = result.formatted_address;
+                return (
+                  <li
+                    key={i}
+                    className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                    onClick={() => {
+                      const loc = result.geometry.location;
+                      if (mapInstanceRef.current && loc) {
+                        mapInstanceRef.current.setCenter(loc);
+                        setMapCenter({ lat: loc.lat(), lng: loc.lng() });
+                        setShowGeocodeSelector(false);
+                      }
+                    }}
+                  >
+                    {formattedAddress}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         )}
       </div>
     </div>

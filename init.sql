@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS images (
+      id SERIAL PRIMARY KEY,
+      customerID VARCHAR(255) NOT NULL,
+      imageURL TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      isActive BOOLEAN
+    );
