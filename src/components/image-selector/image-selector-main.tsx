@@ -17,7 +17,9 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyCtLeDVA1bbNBWKelC-8_8xv7WjgcDNMFk";
 
 export default function ImageSelectorMain({ address }: { address: string }) {
   const initialZipCode = "T2P 2M3";
-const [geocodeOptions, setGeocodeOptions] = useState<google.maps.GeocoderResult[]>([]);
+  const [geocodeOptions, setGeocodeOptions] = useState<
+    google.maps.GeocoderResult[]
+  >([]);
   const mapElementRef = useRef<HTMLDivElement | null>(null); // DOM node
   const mapInstanceRef = useRef<google.maps.Map | null>(null); // actual map
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -189,7 +191,9 @@ const [geocodeOptions, setGeocodeOptions] = useState<google.maps.GeocoderResult[
 
   return (
     <div className="relative w-full max-w-md mx-auto h-[500px]">
-      <div className={` flex flex-nowrap absolute top-2 right-2 z-10 px-4 py-2`}>
+      <div
+        className={` flex flex-nowrap absolute top-2 right-2 z-10 px-4 py-2`}
+      >
         {!mapSnapshot ? (
           <button
             onClick={toggleCaptureView}
@@ -225,16 +229,19 @@ const [geocodeOptions, setGeocodeOptions] = useState<google.maps.GeocoderResult[
         )}
       </div>
 
-      <div id="map-container" className={`relative w-full max-w-[500px] h-[500px] `}>
+      <div
+        id="map-container"
+        className={`relative w-full max-w-[500px] h-[500px] `}
+      >
         {!mapSnapshot ? (
           <div
             ref={mapElementRef}
-            className="w-[500px] h-[500px] absolute top-0 left-0 z-0"
+            className="w-full h-[500px] absolute top-0 left-0 z-0"
           />
         ) : (
           <Image
-          width={500}
-          height={500}
+            width={500}
+            height={500}
             src={mapSnapshot}
             alt="Captured Map View"
             className={`w-full h-[500px] object-cover `}
@@ -246,11 +253,45 @@ const [geocodeOptions, setGeocodeOptions] = useState<google.maps.GeocoderResult[
             ref={canvasRef}
             width={window.innerWidth}
             height={500}
-            className="absolute top-0 left-0 pointer-events-auto cursor-pointer"
+            className="absolute top-0 left-0 pointer-events-auto touch-none cursor-pointer"
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
             onMouseLeave={stopDrawing}
+            onTouchStart={(e) => {
+              const touch = e.touches[0];
+              if (!touch) return;
+              const rect = canvasRef.current?.getBoundingClientRect();
+              if (rect) {
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                setIsDrawing(true);
+                setLastPos({ x, y });
+              }
+            }}
+            onTouchMove={(e) => {
+              if (!isDrawing) return;
+              const touch = e.touches[0];
+              if (!touch) return;
+              const rect = canvasRef.current?.getBoundingClientRect();
+              if (rect) {
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                const ctx = canvasRef.current?.getContext("2d");
+                if (ctx) {
+                  ctx.beginPath();
+                  ctx.moveTo(lastPos.x, lastPos.y);
+                  ctx.lineTo(x, y);
+                  ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+                  ctx.lineWidth = 4;
+                  ctx.lineCap = "round";
+                  ctx.stroke();
+                  setLastPos({ x, y });
+                }
+              }
+            }}
+            onTouchEnd={() => setIsDrawing(false)}
+            onTouchCancel={() => setIsDrawing(false)}
           />
         )}
 
