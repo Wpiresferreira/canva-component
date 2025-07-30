@@ -15,7 +15,7 @@ declare global {
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyCtLeDVA1bbNBWKelC-8_8xv7WjgcDNMFk";
 
-export default function imageSelectorMain({ address }: { address: string }) {
+export default function ImageSelectorMain({ address }: { address: string }) {
   const initialZipCode = "T2P 2M3";
 const [geocodeOptions, setGeocodeOptions] = useState<google.maps.GeocoderResult[]>([]);
   const mapElementRef = useRef<HTMLDivElement | null>(null); // DOM node
