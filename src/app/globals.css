@@ -120,3 +120,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+.cursor-pencil {
+  cursor: url("/pencil.png") 0 32, auto;
+}
+
+

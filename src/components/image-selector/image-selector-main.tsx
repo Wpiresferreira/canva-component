@@ -253,7 +253,7 @@ export default function ImageSelectorMain({ address }: { address: string }) {
             ref={canvasRef}
             width={window.innerWidth}
             height={500}
-            className="absolute top-0 left-0 pointer-events-auto touch-none cursor-pointer"
+            className="absolute top-0 left-0 pointer-events-auto touch-none cursor-pencil"
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
@@ -306,7 +306,7 @@ export default function ImageSelectorMain({ address }: { address: string }) {
                 return (
                   <li
                     key={i}
-                    className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-2 hover:bg-gray-100"
                     onClick={() => {
                       const loc = result.geometry.location;
                       if (mapInstanceRef.current && loc) {
