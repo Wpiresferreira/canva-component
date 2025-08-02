@@ -51,9 +51,9 @@ export default function ImageList() {
           <Image
             src={previewSrc}
             alt="Full screen preview"
-            width={800}
-            height={800}
-            className="max-w-full max-h-full"
+            width={600}
+            height={600}
+            className="max-w-full object-cover max-h-full"
             onClick={() => setPreviewSrc(null)}
           />
           <button

@@ -8,7 +8,7 @@ export default function Tabs() {
   const [tabSelected, setTabSelected] = useState(tabsNames[0]);
 
   return (
-    <>
+    <div className="m-2">
       <div className="flex gap-1">
         {tabsNames.map((tabName) => (
           <div
@@ -22,9 +22,10 @@ export default function Tabs() {
           </div>
         ))}
       </div>
-      <div>{tabSelected == tabsNames[0] && <ImageSelector />}</div>
-      <div>{tabSelected == tabsNames[1] && <ImageUploader />}</div>
-      <div>{tabSelected == tabsNames[2] && <ImageList />}</div>
-    </>
+      <div className="bg-sky-600 rounded-b-md p-2">
+        {tabSelected == tabsNames[0] && <ImageSelector />}
+        {tabSelected == tabsNames[1] && <ImageUploader />}
+        {tabSelected == tabsNames[2] && <ImageList />}</div>
+    </div>
   );
 }

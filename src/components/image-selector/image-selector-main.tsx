@@ -1,9 +1,5 @@
 "use client";
-import {
-  ArrowDownTrayIcon,
-  XMarkIcon,
-  DocumentArrowDownIcon,
-} from "@heroicons/react/24/solid";
+import { CameraIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import React, { useRef, useEffect, useState } from "react";
 
@@ -16,40 +12,84 @@ declare global {
 const GOOGLE_MAPS_API_KEY = "AIzaSyCtLeDVA1bbNBWKelC-8_8xv7WjgcDNMFk";
 
 export default function ImageSelectorMain({ address }: { address: string }) {
-  const initialZipCode = "T2P 2M3";
   const [geocodeOptions, setGeocodeOptions] = useState<
-    google.maps.GeocoderResult[]
+    google.maps.GeocoderResult[] | null
   >([]);
   const mapElementRef = useRef<HTMLDivElement | null>(null); // DOM node
   const mapInstanceRef = useRef<google.maps.Map | null>(null); // actual map
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
-  const [mapSnapshot, setMapSnapshot] = useState<string | null>(null);
   const [mapCenter, setMapCenter] = useState<google.maps.LatLngLiteral | null>(
     null
   );
   const [mapZoom, setMapZoom] = useState<number | null>(null);
   const [showGeocodeSelector, setShowGeocodeSelector] = useState(false);
 
-  const initMap = () => {
+  const initMap = async () => {
     if (!window.google?.maps?.Geocoder || !mapElementRef.current) return;
 
     const geocoder = new window.google.maps.Geocoder();
-    const defaultCenter = { lat: 0, lng: 0 };
 
     const map = new window.google.maps.Map(mapElementRef.current, {
       zoom: mapZoom ?? 20,
       mapTypeId: "hybrid",
       tilt: 0,
       heading: 0,
-      center: mapCenter ?? defaultCenter,
+      center: mapCenter,
+      disableDefaultUI: true,
     });
+
+    //////////////////////////////////////////////////////////////////////////
+    const drawingManager = new google.maps.drawing.DrawingManager({
+      drawingMode: null,
+      drawingControl: true,
+      drawingControlOptions: {
+        position: google.maps.ControlPosition.TOP_LEFT,
+        drawingModes: [
+          google.maps.drawing.OverlayType.RECTANGLE,
+          google.maps.drawing.OverlayType.POLYGON,
+          google.maps.drawing.OverlayType.CIRCLE,
+          google.maps.drawing.OverlayType.MARKER,
+        ],
+      },
+      circleOptions: {
+        fillColor: "rgba(255,0,0)",
+        fillOpacity: 0.8,
+        strokeWeight: 0,
+        clickable: false,
+        editable: false,
+        zIndex: 1,
+      },
+      rectangleOptions: {
+        fillColor: "rgba(255,0,0)",
+        fillOpacity: 0.8,
+        strokeWeight: 0,
+        clickable: false,
+        editable: false,
+        zIndex: 1,
+      },
+      polygonOptions: {
+        fillColor: "rgba(255,0,0)",
+        fillOpacity: 0.8,
+        strokeWeight: 0,
+        clickable: false,
+        editable: false,
+        zIndex: 1,
+      },
+    });
+
+    drawingManager.setMap(map);
+
+    //////////////////////////////////////////////////////////////////////////
 
     mapInstanceRef.current = map;
 
     if (!mapCenter) {
       geocoder.geocode({ address }, (results, status) => {
+        console.log(results);
+        if (!results) {
+          setGeocodeOptions(null);
+          setShowGeocodeSelector(true);
+        }
+
         if (status === "OK" && results) {
           if (results.length === 1) {
             const location = results[0].geometry.location;
@@ -91,7 +131,7 @@ export default function ImageSelectorMain({ address }: { address: string }) {
       }
 
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=drawing`;
       script.async = true;
       script.defer = true;
       script.onload = () => {
@@ -104,60 +144,6 @@ export default function ImageSelectorMain({ address }: { address: string }) {
       loadGoogleScript();
     }
   }, [address]);
-
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!mapSnapshot) return;
-    const { offsetX, offsetY } = e.nativeEvent;
-    setIsDrawing(true);
-    setLastPos({ x: offsetX, y: offsetY });
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !mapSnapshot) return;
-    const { offsetX, offsetY } = e.nativeEvent;
-    const ctx = canvasRef.current?.getContext("2d");
-    if (ctx) {
-      ctx.beginPath();
-      ctx.moveTo(lastPos.x, lastPos.y);
-      ctx.lineTo(offsetX, offsetY);
-      ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
-      ctx.lineWidth = 4;
-      ctx.lineCap = "round";
-      ctx.stroke();
-      setLastPos({ x: offsetX, y: offsetY });
-    }
-  };
-
-  const stopDrawing = () => setIsDrawing(false);
-
-  const clearDrawing = () => {
-    const ctx = canvasRef.current?.getContext("2d");
-    if (ctx && canvasRef.current) {
-      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    }
-  };
-
-  const toggleCaptureView = async () => {
-    if (mapSnapshot) {
-      setMapSnapshot(null);
-      clearDrawing();
-      setTimeout(() => {
-        initMap();
-      }, 0);
-      return;
-    }
-
-    const container = document.getElementById("map-container");
-    if (!container) return;
-
-    const html2canvasFn = (await import("html2canvas-pro")).default;
-    const canvas = await html2canvasFn(container, {
-      useCORS: true,
-      allowTaint: false,
-    });
-    const dataUrl = canvas.toDataURL("image/png");
-    setMapSnapshot(dataUrl);
-  };
 
   const saveDrawing = async () => {
     const container = document.getElementById("map-container");
@@ -191,109 +177,23 @@ export default function ImageSelectorMain({ address }: { address: string }) {
 
   return (
     <div className="relative w-full max-w-md mx-auto h-[500px]">
-      <div
-        className={` flex flex-nowrap absolute top-2 right-2 z-10 px-4 py-2`}
-      >
-        {!mapSnapshot ? (
-          <button
-            onClick={toggleCaptureView}
-            className="flex gap-2 mx-2 px-4 py-2 text-white rounded bg-blue-600"
-          >
-            <ArrowDownTrayIcon className="w-5 h-5 text-white" />
-            Capture Map View
-          </button>
-        ) : (
-          <>
-            <button
-              onClick={clearDrawing}
-              className="flex gap-2 mx-2 px-4 py-2 text-white rounded bg-red-500"
-            >
-              <XMarkIcon className="w-5 h-5 text-white" />
-              Clear Drawing
-            </button>
-            <button
-              onClick={saveDrawing}
-              className="flex gap-2 mx-2 px-4 py-2 text-white rounded bg-green-600"
-            >
-              <DocumentArrowDownIcon className="w-5 h-5 text-white" />
-              Save Image with Drawing
-            </button>
-            <button
-              onClick={toggleCaptureView}
-              className="flex gap-2 mx-2 px-4 py-2 text-white rounded bg-blue-600"
-            >
-              <ArrowDownTrayIcon className="w-5 h-5 text-white" />
-              Return to Google Map
-            </button>
-          </>
-        )}
+      <div className={`flex flex-nowrap absolute top-2 right-2 z-10 px-4 py-2`}>
+        <button
+          onClick={saveDrawing}
+          className="flex gap-2 mx-2 px-4 py-2 text-white rounded bg-sky-700 hover:bg-sky-500"
+        >
+          <CameraIcon className="w-5 h-5 text-white" />
+        </button>
       </div>
 
       <div
         id="map-container"
         className={`relative w-full max-w-[500px] h-[500px] `}
       >
-        {!mapSnapshot ? (
-          <div
-            ref={mapElementRef}
-            className="w-full h-[500px] absolute top-0 left-0 z-0"
-          />
-        ) : (
-          <Image
-            width={500}
-            height={500}
-            src={mapSnapshot}
-            alt="Captured Map View"
-            className={`w-full h-[500px] object-cover `}
-          />
-        )}
-
-        {mapSnapshot && (
-          <canvas
-            ref={canvasRef}
-            width={window.innerWidth}
-            height={500}
-            className="absolute top-0 left-0 pointer-events-auto touch-none cursor-pencil"
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-            onTouchStart={(e) => {
-              const touch = e.touches[0];
-              if (!touch) return;
-              const rect = canvasRef.current?.getBoundingClientRect();
-              if (rect) {
-                const x = touch.clientX - rect.left;
-                const y = touch.clientY - rect.top;
-                setIsDrawing(true);
-                setLastPos({ x, y });
-              }
-            }}
-            onTouchMove={(e) => {
-              if (!isDrawing) return;
-              const touch = e.touches[0];
-              if (!touch) return;
-              const rect = canvasRef.current?.getBoundingClientRect();
-              if (rect) {
-                const x = touch.clientX - rect.left;
-                const y = touch.clientY - rect.top;
-                const ctx = canvasRef.current?.getContext("2d");
-                if (ctx) {
-                  ctx.beginPath();
-                  ctx.moveTo(lastPos.x, lastPos.y);
-                  ctx.lineTo(x, y);
-                  ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
-                  ctx.lineWidth = 4;
-                  ctx.lineCap = "round";
-                  ctx.stroke();
-                  setLastPos({ x, y });
-                }
-              }
-            }}
-            onTouchEnd={() => setIsDrawing(false)}
-            onTouchCancel={() => setIsDrawing(false)}
-          />
-        )}
+        <div
+          ref={mapElementRef}
+          className="w-full h-[500px] absolute top-0 left-0 z-0"
+        />
 
         {showGeocodeSelector && (
           <div className="absolute top-4 left-4 z-20 bg-white shadow-md rounded max-w-md w-[90%] sm:w-[400px]">
@@ -301,25 +201,31 @@ export default function ImageSelectorMain({ address }: { address: string }) {
               Select a Location
             </h2>
             <ul>
-              {geocodeOptions.map((result, i) => {
-                const formattedAddress = result.formatted_address;
-                return (
-                  <li
-                    key={i}
-                    className="px-4 py-2 hover:bg-gray-100"
-                    onClick={() => {
-                      const loc = result.geometry.location;
-                      if (mapInstanceRef.current && loc) {
-                        mapInstanceRef.current.setCenter(loc);
-                        setMapCenter({ lat: loc.lat(), lng: loc.lng() });
-                        setShowGeocodeSelector(false);
-                      }
-                    }}
-                  >
-                    {formattedAddress}
-                  </li>
-                );
-              })}
+              {geocodeOptions ? (
+                geocodeOptions.map((result, i) => {
+                  const formattedAddress = result.formatted_address;
+                  return (
+                    <li
+                      key={i}
+                      className="px-4 py-2 hover:bg-gray-100"
+                      onClick={() => {
+                        const loc = result.geometry.location;
+                        if (mapInstanceRef.current && loc) {
+                          mapInstanceRef.current.setCenter(loc);
+                          setMapCenter({ lat: loc.lat(), lng: loc.lng() });
+                          setShowGeocodeSelector(false);
+                        }
+                      }}
+                    >
+                      {formattedAddress}
+                    </li>
+                  );
+                })
+              ) : (
+                <li className="px-4 py-2 hover:bg-gray-100">
+                  Address not found
+                </li>
+              )}
             </ul>
           </div>
         )}

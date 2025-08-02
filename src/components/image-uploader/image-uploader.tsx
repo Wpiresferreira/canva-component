@@ -57,10 +57,10 @@ export default function ImageUploader() {
         className={`px-6 py-3 rounded-md shadow-md text-white font-semibold transition duration-300 ease-in-out ${
           uploading || !file
             ? "bg-gray-400 cursor-not-allowed"
-            : "bg-blue-600 hover:bg-blue-700"
+            : "bg-sky-700 hover:bg-sky-500"
         }`}
       >
-        {uploading ? "Uploading..." : "Upload to Vercel Blob"}
+        {uploading ? "Uploading..." : "Upload"}
       </button>
     </div>
   );
